@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NASDAQ Stock Dashboard</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .chart-container {
+      width: 80%;
+      margin: auto;
+    }
+    .axis-label {
+      font-size: 14px;
+    }
+    .tooltip {
+      position: absolute;
+      background: white;
+      padding: 5px;
+      border: 1px solid #ccc;
+      pointer-events: none;
+      opacity: 0;
+    }
+    select {
+      margin: 10px;
+      padding: 5px;
+      font-size: 16px;
+    }
+    .loading {
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h2>NASDAQ Stock Price Dashboard</h2>
+  <label for="stock-select">Choose a stock/ETF:</label>
+  <select id="stock-select"></select>
+  <div class="loading" id="loading-message">Loading data...</div>
+
+  <div class="chart-container">
+    <svg width="800" height="500"></svg>
+  </div>
+  <div class="tooltip"></div>
+
+  <script>
+    const margin = { top: 50, right: 50, bottom: 50, left: 50 },
+          width = 800 - margin.left - margin.right,
+          height = 500 - margin.top - margin.bottom;
+
+    const svg = d3.select("svg")
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const tooltip = d3.select(".tooltip");
+    const loadingMessage = d3.select("#loading-message");
+
+    function updateChart(ticker, type) {
+      loadingMessage.text("Loading " + ticker + " data...");
+      const folder = type.toLowerCase() === "etf" ? "etfs" : "stocks";
+      const filePath = `dataset/${folder}/${ticker}.csv`;
+
+      d3.csv(filePath).then(data => {
+        data.forEach(d => {
+          d.Date = new Date(d.Date);
+          d.Close = +d.Close;
+          d.Volume = +d.Volume;
+        });
+
+        data.sort((a, b) => a.Date - b.Date);
+
+        const xScale = d3.scaleTime()
+          .domain(d3.extent(data, d => d.Date))
+          .range([0, width]);
+
+        const yScale = d3.scaleLinear()
+          .domain([d3.min(data, d => d.Close), d3.max(data, d => d.Close)])
+          .range([height, 0]);
+
+        const yVolumeScale = d3.scaleLinear()
+          .domain([0, d3.max(data, d => d.Volume)])
+          .range([height, height * 0.75]);
+
+        svg.selectAll("*").remove();
+
+        svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(xScale));
+
+        svg.append("g")
+          .call(d3.axisLeft(yScale));
+
+        svg.append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", "steelblue")
+          .attr("stroke-width", 2)
+          .attr("d", d3.line()
+            .x(d => xScale(d.Date))
+            .y(d => yScale(d.Close))
+          );
+
+        svg.selectAll(".bar")
+          .data(data)
+          .enter().append("rect")
+          .attr("class", "bar")
+          .attr("x", d => xScale(d.Date) - 2)
+          .attr("y", d => yVolumeScale(d.Volume))
+          .attr("width", 4)
+          .attr("height", d => height - yVolumeScale(d.Volume))
+          .attr("fill", "lightgrey");
+
+        // Add data points (circles) with tooltips
+        svg.selectAll(".dot")
+          .data(data)
+          .enter().append("circle")
+          .attr("class", "dot")
+          .attr("cx", d => xScale(d.Date))
+          .attr("cy", d => yScale(d.Close))
+          .attr("r", 4)
+          .attr("fill", "orange")
+          .on("mouseover", (event, d) => {
+            tooltip.style("opacity", 1)
+              .html(`
+                Date: ${d.Date.toLocaleDateString()}<br>
+                Close: ${d.Close}<br>
+                Volume: ${d.Volume}
+              `)
+              .style("left", `${event.pageX + 10}px`)
+              .style("top", `${event.pageY - 20}px`);
+          })
+          .on("mouseout", () => {
+            tooltip.style("opacity", 0);
+          });
+
+        loadingMessage.text("");
+      }).catch(error => {
+        loadingMessage.text(`Error loading data for ${ticker}`);
+        console.error(`Error loading CSV for ${ticker}:`, error);
+      });
+    }
+
+    // Load metadata (symbols_valid_meta.csv) to populate dropdown
+    d3.csv("dataset/symbols_valid_meta.csv").then(metaData => {
+      const stockSelect = d3.select("#stock-select");
+
+      stockSelect.selectAll("option")
+        .data(metaData)
+        .enter().append("option")
+        .attr("value", d => d.Symbol)
+        .attr("data-type", d => d.Type)
+        .text(d => `${d.Symbol} - ${d.FullName}`);
+
+      stockSelect.on("change", function() {
+        const selectedOption = d3.select(this).select("option:checked").node();
+        const ticker = selectedOption.value;
+        const type = selectedOption.getAttribute("data-type");
+        updateChart(ticker, type);
+      });
+
+      if (metaData.length > 0) {
+        const first = metaData[0];
+        stockSelect.property("value", first.Symbol);
+        updateChart(first.Symbol, first.Type);
+      }
+    }).catch(error => {
+      loadingMessage.text("Error loading metadata.");
+      console.error("Error loading symbols_valid_meta.csv:", error);
+    });
+  </script>
+</body>
+</html>
