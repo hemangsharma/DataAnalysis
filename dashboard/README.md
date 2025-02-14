@@ -1,5 +1,7 @@
 # Dashboard
 
+Created two diffrent dasboards for comparison based on perfromance. Resulting in the python out performing the D3.JS one.
+
 ## D3.JS
 
 To use the D3.JS Dashboard use the following command in the root directory.
@@ -8,14 +10,14 @@ python -m http.server 8000
 ```
 Followed by <a href="http://localhost:8000/dashboard/index.html">http://localhost:8000/dashboard/index.html</a> in your browser 
 
-## Python/ Streamlit
+## Python | Streamlit
 
 For streamlit version, use the following command:
 
 ```bash
 DataAnalysis/dashboard streamlit run dashboard.py 
 ```
-### ## Python/ Streamlit Outputs
+### Python | Streamlit Outputs
 
 ![](o1.png)
 ![](o2.png)
