@@ -1,5 +1,10 @@
 # DataAnalysis
 
+![Python](https://www.python.org/community/logos/python-logo-master-v3-TM.png)
+![Jupyter Notebook](https://jupyter.org/assets/main-logo.svg)
+![JavaScript](https://upload.wikimedia.org/wikipedia/commons/6/6a/JavaScript-logo.png)
+![Seaborn](https://seaborn.pydata.org/_static/seaborn-logo-wide.svg)
+
 ## Project Ideas
 
 ### 1. Data Visualization
